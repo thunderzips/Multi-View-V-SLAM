@@ -12,7 +12,14 @@ while cap.isOpened():
         print("Can't receive frame (stream end?). Exiting ...")
         break
 
-    with_features = feature_points_extractor.get_features(frame)
+    with_features, direction = feature_points_extractor.get_features(frame)
+
+    print(direction)
+
+    # if loc[0]<0:
+    #     print("left")
+    # elif loc[0]>0:
+    #     print("right")
 
     cv2.imshow('frame', with_features)
     # cv2.imshow('mask',mask)
