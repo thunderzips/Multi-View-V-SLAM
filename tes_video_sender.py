@@ -1,29 +1,22 @@
 import feature_points_extractor
 import cv2
-import numpy as np
-import time
 
-cap = cv2.VideoCapture('test_video.mp4')
+cap = cv2.VideoCapture('test_video3.mp4')
 
 while cap.isOpened():
-    ret, frame = cap.read()
-    # if frame is read correctly ret is True
-    if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
-        break
+    if True:
+        ret, frame = cap.read()
+        if not ret:
+            print("exiting....")
+            break
 
-    with_features, direction = feature_points_extractor.get_features(frame)
+        with_features, direction = feature_points_extractor.get_features(frame)
 
-    print(direction)
+        print(direction)
 
-    # if loc[0]<0:
-    #     print("left")
-    # elif loc[0]>0:
-    #     print("right")
+        cv2.imshow('frame', with_features)
+        if cv2.waitKey(1) == ord('q'):
+            break
 
-    cv2.imshow('frame', with_features)
-    # cv2.imshow('mask',mask)
-    if cv2.waitKey(1) == ord('q'):
-        break
 cap.release()
 cv2.destroyAllWindows()
