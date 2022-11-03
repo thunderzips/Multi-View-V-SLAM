@@ -15,6 +15,7 @@ while cap.isOpened():
     with_features = feature_points_extractor.get_features(frame)
 
     cv2.imshow('frame', with_features)
+    # cv2.imshow('mask',mask)
     if cv2.waitKey(1) == ord('q'):
         break
 cap.release()
