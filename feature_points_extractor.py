@@ -1,10 +1,24 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import copy
-import time
 import math
 import random
+from cv_bridge import CvBridge
+import rospy
+from sensor_msgs.msg import Image
+from std_msgs.msg import Float64MultiArray, Int16
+
+
+
+
+rospy.init_node("feature_points_extractor")
+
+image_pub = rospy.Publisher("image_with_features",Image,queue_size=1)
+dir_pub = rospy.Publisher("servo_direction",Int16,queue_size=10)
+keypoints_pub = rospy.Publisher("keypoints",Float64MultiArray,queue_size=10)
+landmark_pub = rospy.Publisher("landmark",Float64MultiArray,queue_size=10)
+
+
+bridge = CvBridge()
 
 global orb
 orb = cv2.ORB_create()
@@ -23,9 +37,13 @@ def get_distance(p1,p2):
 
 def get_features(original_image):
 
-    rl_val = {True:'r',False:'l'}
-    center = [np.shape(original_image)[1]/2,np.shape(original_image)[0]/2]
+    original_image = bridge.imgmsg_to_cv2(original_image, "bgr8")
 
+
+    rl_val = {True:1,False:-1}
+    center = [np.shape(original_image)[1]/2,np.shape(original_image)[0]/2]
+    # print("center = ",center)
+    # center = 640,360
     global init
     global landmark
     global p_landmark
@@ -40,6 +58,10 @@ def get_features(original_image):
 
     for i in original_keypoints:
         key_points_loc.append(i.pt)
+
+    key_points_loc_ros = Float64MultiArray()
+    key_points_loc_ros.data = key_points_loc
+
 
     try:
         if not init == 'done':
@@ -59,5 +81,19 @@ def get_features(original_image):
     except:
         pass
 
-    return op, rl_val[list(np.array(p_landmark)-np.array(center))[0] > 0]
+    # return op, rl_val[list(np.array(p_landmark)-np.array(center))[0] > 0]
 
+    cv2.imshow("final",op)
+    cv2.waitKey(1)
+
+    landmark_loc_ros = Float64MultiArray()
+    landmark_loc_ros.data = key_points_loc[landmark]
+
+    image_pub.publish(bridge.cv2_to_imgmsg(op, "bgr8"))
+    # keypoints_pub.publish(key_points_loc_ros)
+    dir_pub.publish(rl_val[list(np.array(p_landmark)-np.array(center))[0] > 0])
+    landmark_pub.publish(landmark_loc_ros)
+
+image_sub = rospy.Subscriber("camera_feed",Image,get_features)
+
+rospy.spin()
