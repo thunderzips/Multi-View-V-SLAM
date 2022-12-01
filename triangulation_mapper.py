@@ -5,6 +5,7 @@ from math import atan,tan,pi,sin,cos
 import random
 import numpy as np
 from scipy import linalg
+import time
 
 global posx
 global posy
@@ -12,6 +13,13 @@ global posphi
 global previous_P
 global previous_p
 global previous_l
+
+
+global odom_file
+global points_file
+
+odom_file = open("odom.txt","w+")
+# points_file = open("points.txt","w+")
 
 
 previous_P = np.zeros((3,4))
@@ -63,6 +71,11 @@ def LinearTriangulation(P1,  point1,P2, point2):
 
 
 def map(landmark_loc):
+
+    global odom_file
+    global points_file
+
+
     global posx
     global posy
     global posphi
@@ -104,6 +117,16 @@ def map(landmark_loc):
     if (l[0]-previous_l[0])**2 + (l[1]-previous_l[1])**2 <= 25:#((posx-l[0])**2 + (posy-l[1])**2)*0.1:
         print(l)
         plt.scatter(l[0],l[1])
+        # points_file.write(str(l[0])+" "+str(l[1])+"\n")
+        odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+" "+str(l[0])+" "+str(l[1])+"\n")
+
+    else:
+        # points_file.write("NA\n")
+        odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+" NA"+"\n")
+
+
+    # points_file.write("TEST \n")
+    # odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+"\n")
 
 
     previous_l = l

@@ -6,6 +6,7 @@ import carla
 import random
 import time
 import numpy as np
+import random
 
 import pygame
 import pygame.camera
@@ -51,7 +52,10 @@ def rotate_camera(dirr):
     r = camera.get_transform().rotation.yaw -vehicle.get_transform().rotation.yaw + dirr.data
 
     if abs(r) >= 160:
-        r = 0
+        r = 45
+    
+        if random.random() > 0.5:
+            r = -r
 
     # print(r)
     camera.set_transform(carla.Transform(carla.Location(x=0,y=0,z=2),carla.Rotation(yaw= r)))
