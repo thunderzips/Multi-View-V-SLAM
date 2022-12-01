@@ -33,9 +33,11 @@ except:
 
 rospy.init_node('carla_car', anonymous=True)
 image_pub = rospy.Publisher("camera_feed",Image,queue_size=10)
+static_image_pub = rospy.Publisher("static_camera_feed",Image,queue_size=10)
 posx_pub = rospy.Publisher("posx",Float64,queue_size=10)
 posy_pub = rospy.Publisher("posy",Float64,queue_size=10)
 posphi_pub = rospy.Publisher("posphi",Float64,queue_size=10)
+feature_change_pub = rospy.Publisher("feature_change",Int16,queue_size=10)
 bridge = CvBridge()
 
 global i
@@ -45,6 +47,13 @@ global camera
 
 global orientation_camera
 
+
+global previous_posphi
+global dir_change
+
+dir_change = 0
+
+previous_posphi = 0
 
 def rotate_camera(dirr):
     global camera
@@ -58,11 +67,13 @@ def rotate_camera(dirr):
             r = -r
 
     # print(r)
-    camera.set_transform(carla.Transform(carla.Location(x=0,y=0,z=2),carla.Rotation(yaw= r)))
+    camera.set_transform(carla.Transform(carla.Location(x=0,y=0,z=2.5),carla.Rotation(yaw= r)))
 
 def compute_display(image, camera):
 
     global vehicle
+    global previous_posphi
+    global dir_change
 
     array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
     array = np.reshape(array, (image.height, image.width, 4))
@@ -83,7 +94,28 @@ def compute_display(image, camera):
     posy_pub.publish(camy)
     posphi_pub.publish(camphi)
 
-    print("runnig ",random.random())
+    # print("runnig ",random.random())
+
+    # print(previous_posphi-camphi)
+
+    if abs(previous_posphi-camphi) > 1:
+        dir_change = 1
+        feature_change_pub.publish(1)
+    
+    else:
+        dir_change = 0
+        feature_change_pub.publish(0)
+
+    previous_posphi = camphi
+
+def compute_display_static(image):
+
+    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+    array = np.reshape(array, (image.height, image.width, 4))
+
+    array = cv2.cvtColor(array,cv2.COLOR_RGB2BGR)
+
+    static_image_pub.publish(bridge.cv2_to_imgmsg(array, "bgr8"))
 
 
 def main():
@@ -113,11 +145,26 @@ def main():
     camera_bp.set_attribute('image_size_y','800')
     camera_bp.set_attribute('fov','90')
    
+
+    camera_bp_static = bplib.find('sensor.camera.rgb')
+    camera_bp_static.set_attribute('image_size_x','800')
+    camera_bp_static.set_attribute('image_size_y','800')
+    camera_bp_static.set_attribute('fov','90')
+   
     
     camera_transform = carla.Transform(carla.Location(x=0,z=2))
     camera = world.spawn_actor(camera_bp,camera_transform, attach_to=vehicle)
+
+    camera_static_transform = carla.Transform(carla.Location(x=0,z=1.7))
+
+
+
+    camera_static = world.spawn_actor(camera_bp_static,camera_static_transform, attach_to=vehicle)
     
     camera.listen(lambda image: compute_display(image,camera))
+
+
+    camera_static.listen(lambda image: compute_display_static(image))
 
     dirr_sub = rospy.Subscriber("servo_direction",Float64,rotate_camera)
 

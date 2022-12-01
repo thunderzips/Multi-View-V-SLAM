@@ -43,7 +43,7 @@ def get_features(original_image):
 
     original_image = bridge.imgmsg_to_cv2(original_image, "bgr8")
 
-    print("runnig ",random.random())
+    # print("runnig ",random.random())
 
 
     rl_val = {True:1,False:-1}
@@ -87,8 +87,6 @@ def get_features(original_image):
     except:
         pass
 
-    # return op, rl_val[list(np.array(p_landmark)-np.array(center))[0] > 0]
-
     cv2.imshow("final",op)
     cv2.waitKey(1)
 
@@ -100,6 +98,8 @@ def get_features(original_image):
     
     dir_pub.publish(Kp*list(np.array(p_landmark)-np.array(center))[0])
     landmark_pub.publish(landmark_loc_ros)
+
+
 
 
 image_sub = rospy.Subscriber("camera_feed",Image,get_features)

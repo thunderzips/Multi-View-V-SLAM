@@ -1,5 +1,5 @@
 import rospy
-from std_msgs.msg import Float64MultiArray, Float64
+from std_msgs.msg import Float64MultiArray, Float64, Int16
 import matplotlib.pyplot as plt
 from math import atan,tan,pi,sin,cos
 import random
@@ -13,6 +13,7 @@ global posphi
 global previous_P
 global previous_p
 global previous_l
+global feature_change
 
 
 global odom_file
@@ -28,6 +29,12 @@ previous_l = [0,0]
 posx = 0
 posy = 0
 posphi = 0
+
+global l_points
+
+l_points = [[[0,0],0]]
+
+feature_change = 0
 
 i = 0
 
@@ -84,6 +91,10 @@ def map(landmark_loc):
     global previous_P
     global previous_p
 
+    global feature_change
+
+    global l_points
+
 
     f = 400
     cu = 400
@@ -103,7 +114,6 @@ def map(landmark_loc):
     temp = np.matmul(F,rzt)
     P = np.matmul(k,temp)
     p = list(landmark_loc.data)
-    # p = p.append(1)
     p.append(1)
     p = np.array(p)
 
@@ -113,20 +123,34 @@ def map(landmark_loc):
 
     l = [l[0]-posx,l[1]-posy]
 
+    if feature_change == 0:
+        w = l_points[-1][1]
+        l[0] = (l[0]+w*previous_l[0])/(w+1)
+        l[1] = (l[1]+w*previous_l[1])/(w+1)
 
-    if (l[0]-previous_l[0])**2 + (l[1]-previous_l[1])**2 <= 25:#((posx-l[0])**2 + (posy-l[1])**2)*0.1:
-        print(l)
-        plt.scatter(l[0],l[1])
-        # points_file.write(str(l[0])+" "+str(l[1])+"\n")
+        l_points = l_points[:-1]
+
+        if abs(l[0]) <= 1000 and abs(l[1]) <= 1000:
+            l_points.append([l,w+1])
+    else:
+        l_points[-1][1] = 0
+        if abs(l[0]) <= 1000 and abs(l[1]) <= 1000:
+
+            l_points.append([l,0])
+
+
+    
+
+
+    if (l[0]-previous_l[0])**2 + (l[1]-previous_l[1])**2 <= 50:#((posx-l[0])**2 + (posy-l[1])**2)*0.1:
+        # print(l)
+        # plt.scatter(l[0],l[1])
         odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+" "+str(l[0])+" "+str(l[1])+"\n")
+        # l_points.append(l)
 
     else:
-        # points_file.write("NA\n")
         odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+" NA"+"\n")
 
-
-    # points_file.write("TEST \n")
-    # odom_file.write(str(posx)+" "+str(posy)+" "+str(posphi)+" "+str(time.time())+"\n")
 
 
     previous_l = l
@@ -136,6 +160,10 @@ def map(landmark_loc):
 
     # print("runnig ",random.random())
 
+    plt.clf()
+
+    for i in l_points:
+        plt.scatter(i[0][0],i[0][1])
 
     # plt.scatter(posx,posy,c='g')
     plt.pause(0.000000000000000000000000000000000001)
@@ -152,10 +180,15 @@ def update_posphi(posphi_obtained):
     global posphi
     posphi = float(posphi_obtained.data)
 
+def update_feature_change(posphi_obtained):
+    global feature_change
+    feature_change = float(posphi_obtained.data)
+
 
 image_sub = rospy.Subscriber("landmark",Float64MultiArray,map)
 posx_sub = rospy.Subscriber("posx",Float64,update_posx)
 posy_sub = rospy.Subscriber("posy",Float64,update_posy)
 posphi_sub = rospy.Subscriber("posphi",Float64,update_posphi)
+feature_change_sub = rospy.Subscriber("feature_change",Int16,update_feature_change)
 
 rospy.spin()
