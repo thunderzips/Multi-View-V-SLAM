@@ -16,7 +16,7 @@ from cv_bridge import CvBridge
 import cv2
 import rospy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Int16
 from PIL import Image as im
 
 
@@ -34,11 +34,31 @@ rospy.init_node('carla_car', anonymous=True)
 image_pub = rospy.Publisher("camera_feed",Image,queue_size=10)
 posx_pub = rospy.Publisher("posx",Float64,queue_size=10)
 posy_pub = rospy.Publisher("posy",Float64,queue_size=10)
+posphi_pub = rospy.Publisher("posphi",Float64,queue_size=10)
 bridge = CvBridge()
 
+global i
+i = 0
 
+global camera
+
+global orientation_camera
+
+
+def rotate_camera(dirr):
+    global camera
+    global vehicle
+    r = camera.get_transform().rotation.yaw -vehicle.get_transform().rotation.yaw + dirr.data
+
+    if abs(r) >= 160:
+        r = 0
+
+    # print(r)
+    camera.set_transform(carla.Transform(carla.Location(x=0,y=0,z=2),carla.Rotation(yaw= r)))
 
 def compute_display(image, camera):
+
+    global vehicle
 
     array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
     array = np.reshape(array, (image.height, image.width, 4))
@@ -47,23 +67,26 @@ def compute_display(image, camera):
 
     image_pub.publish(bridge.cv2_to_imgmsg(array, "bgr8"))
 
-    print('published image')
+    # print('published image')
 
 
     camx = camera.get_transform().location.x
     camy = camera.get_transform().location.y
     camz = camera.get_transform().location.z
-    
+    camphi = camera.get_transform().rotation.yaw
+
     posx_pub.publish(camx)
     posy_pub.publish(camy)
+    posphi_pub.publish(camphi)
 
-
+    print("runnig ",random.random())
 
 
 def main():
     global vehicle
     global steer
     global throts
+    global camera
 
     pygame.init()
     display_surface = pygame.display.set_mode((300,300))
@@ -90,9 +113,10 @@ def main():
     camera_transform = carla.Transform(carla.Location(x=0,z=2))
     camera = world.spawn_actor(camera_bp,camera_transform, attach_to=vehicle)
     
-    map = world.get_map()
-
     camera.listen(lambda image: compute_display(image,camera))
+
+    dirr_sub = rospy.Subscriber("servo_direction",Float64,rotate_camera)
+
     
     # vehicle.set_autopilot(True)
 
@@ -104,7 +128,7 @@ def main():
         keys=pygame.key.get_pressed()
 
         if keys[K_w]:
-            throt = 0.7
+            throt = 0.4
             rev = False
             vehicle.apply_control(carla.VehicleControl(throttle=throt, steer=steer,reverse = rev))
 

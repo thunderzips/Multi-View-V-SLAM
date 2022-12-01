@@ -5,15 +5,16 @@ import random
 from cv_bridge import CvBridge
 import rospy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float64MultiArray, Int16
+from std_msgs.msg import Float64MultiArray, Int16, Float64
 
 
+Kp = 0.05
 
 
 rospy.init_node("feature_points_extractor")
 
 image_pub = rospy.Publisher("image_with_features",Image,queue_size=1)
-dir_pub = rospy.Publisher("servo_direction",Int16,queue_size=10)
+dir_pub = rospy.Publisher("servo_direction",Float64,queue_size=10)
 keypoints_pub = rospy.Publisher("keypoints",Float64MultiArray,queue_size=10)
 landmark_pub = rospy.Publisher("landmark",Float64MultiArray,queue_size=10)
 
@@ -37,13 +38,18 @@ def get_distance(p1,p2):
 
 def get_features(original_image):
 
+    rate = rospy.Rate(10)
+
+
     original_image = bridge.imgmsg_to_cv2(original_image, "bgr8")
+
+    print("runnig ",random.random())
 
 
     rl_val = {True:1,False:-1}
     center = [np.shape(original_image)[1]/2,np.shape(original_image)[0]/2]
     # print("center = ",center)
-    # center = 640,360
+    # center = 400,400
     global init
     global landmark
     global p_landmark
@@ -91,8 +97,10 @@ def get_features(original_image):
 
     image_pub.publish(bridge.cv2_to_imgmsg(op, "bgr8"))
     # keypoints_pub.publish(key_points_loc_ros)
-    dir_pub.publish(rl_val[list(np.array(p_landmark)-np.array(center))[0] > 0])
+    
+    dir_pub.publish(Kp*list(np.array(p_landmark)-np.array(center))[0])
     landmark_pub.publish(landmark_loc_ros)
+
 
 image_sub = rospy.Subscriber("camera_feed",Image,get_features)
 
